@@ -1,3 +1,3 @@
 *.exe
 *.out
-./http-server
+http-server
