@@ -1,54 +1,31 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net"
-	"net/http"
 )
 
-const DEFAULT_PORT = 80
-const ALTERNATE_PORT = 8080
+const DEFAULT_PORT int = 80
 
-func checkAvailablePort(port int) error {
-	portAddStr := fmt.Sprintf(":%d", port)
+const FLAG_PORT_HELP string = "the port to listen for requests"
 
-	tcpAddr, err := net.ResolveTCPAddr("tcp4", portAddStr)
-	if err != nil {
-		log.Fatal("there was a problem in using 127.0.0.1 or port number")
-	}
-	listener, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		// cannot open port
-		return err
-	} else {
-		listener.Close()
-		return nil
-	}
-}
+const CANNOT_OPEN_PORT_MSG string = `cannot connect to specified port
+ consider running executable with super user permission
+ hint: opening ports <= 1024 typically need more permission`
+
+var flagPort *int = flag.Int("port", DEFAULT_PORT, FLAG_PORT_HELP)
 
 func main() {
-	var port int = DEFAULT_PORT
-	if checkAvailablePort(DEFAULT_PORT) != nil {
-		log.Printf("cannot open %d port :(\ntry running with sudo access\n", DEFAULT_PORT)
-		if checkAvailablePort(ALTERNATE_PORT) != nil {
-			log.Fatalf("cannot open %d port either, exiting\n", ALTERNATE_PORT)
-		} else {
-			port = ALTERNATE_PORT
-			log.Printf("%d port was ok, using that\n", ALTERNATE_PORT)
-		}
-	} else {
-		log.Printf("using port %d", port)
-	}
-	portStr := fmt.Sprintf(":%d", port)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Println("/ called")
-		fmt.Println(req.URL)
-	})
-	http.HandleFunc("/author", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "author: roozbeh sharifnasab\n")
-		log.Println("author called")
-	})
-	log.Fatal(http.ListenAndServe(portStr, nil))
+	flag.Parse()
+
+	address := fmt.Sprintf(":%d", *flagPort)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Fatal(CANNOT_OPEN_PORT_MSG)
+	}
+	log.Printf("server is running on " + address)
+	_ = listener
 }
