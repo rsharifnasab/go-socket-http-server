@@ -26,11 +26,12 @@ const CANNOT_OPEN_PORT_MSG string = `cannot connect to specified port
  because opening ports <= 1024 typically need more permission`
 
 var HEADER_REGEX_1 = regexp.MustCompile(
-	`^(GET|POST) (/[\w\./]*) HTTP/\d\.\d$`)
+	`^(GET) (/[\w\./]*) HTTP/\d\.\d$`)
 
 var flagPort *int = flag.Int("port", DEFAULT_PORT, FLAG_PORT_HELP)
 
 const NOT_FOUND_MSG = "404 Not Found\r\n"
+const BAD_REQ_MSG = "400 Bad Request\r\n"
 
 type (
 	HttpRequest struct {
@@ -82,7 +83,8 @@ func CreateRequest(scanner *bufio.Scanner) (*HttpRequest, error) {
 	}
 	firstLine := scanner.Text()
 	if firstLine == "" {
-		return CreateRequest(scanner)
+		return nil, errors.New("first line was empty")
+		//return CreateRequest(scanner)
 	}
 	res := HEADER_REGEX_1.FindStringSubmatch(firstLine)
 	if len(res) < 1 {
@@ -197,7 +199,7 @@ func emptyResponse() *HttpResponse {
 func createError400() *HttpResponse {
 	resp := emptyResponse()
 	resp.Status = 400
-	resp.Data = []byte("error 400, bad request\r\n")
+	resp.Data = []byte(BAD_REQ_MSG)
 	resp.ContentLength = int64(len(resp.Data))
 	return resp
 }
