@@ -18,6 +18,20 @@ const CANNOT_OPEN_PORT_MSG string = `cannot connect to specified port
 
 var flagPort *int = flag.Int("port", DEFAULT_PORT, FLAG_PORT_HELP)
 
+type HttpRequest struct {
+	Method  string
+	Path    string
+	Version string
+	Host    string
+}
+
+type HttpResponse struct {
+	Status        int
+	Date          string
+	ContentLength int
+	Data          []byte
+}
+
 func main() {
 
 	flag.Parse()
@@ -28,7 +42,8 @@ func main() {
 		log.Fatal(CANNOT_OPEN_PORT_MSG)
 	}
 	defer listener.Close()
-	log.Printf("server is running on " + address)
+
+	log.Printf("Server is running on " + address)
 
 	for {
 		connection, err := listener.Accept()
@@ -41,21 +56,43 @@ func main() {
 	}
 }
 
-func connectionHandler(conn net.Conn) {
-	defer conn.Close()
-	log.Printf("new connection from [%s]", conn.LocalAddr())
-	writer := bufio.NewWriter(conn)
-	scanner := bufio.NewScanner(conn)
-
-	writer.WriteString("salam chetori?\n")
-	writer.Flush()
+func CreateRequest(scanner *bufio.Scanner) (*HttpRequest, error) {
+	req := &HttpRequest{}
 
 	for scanner.Scan() {
 		scanner.Text()
 	}
 	if err := scanner.Err(); err != nil {
-		// error: TODO
-		writer.WriteString("nashod")
+		return nil, err
 	}
+	return req, nil
+}
+
+func writeResponse(response HttpResponse, writer *bufio.Writer) error {
+	writer.WriteString("salam chetori?\n")
+	writer.Flush()
+
+	return nil
+}
+
+func serverLogic(req *HttpRequest) HttpResponse {
+	response := HttpResponse{Status: 200}
+
+	return response
+}
+
+func connectionHandler(conn net.Conn) {
+	defer conn.Close()
+	log.Printf("new connection from [%s]", conn.LocalAddr())
+
+	request, err := CreateRequest(bufio.NewScanner(conn))
+	if err != nil {
+		return // 500
+	}
+
+	response := serverLogic(request)
+
+	writeResponse(response, bufio.NewWriter(conn))
+
 	log.Printf("connection closed")
 }
