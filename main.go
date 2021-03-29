@@ -123,7 +123,7 @@ func writeResponse(res *HttpResponse, writer *bufio.Writer) error {
 	firstLine := format("HTTP/1.1 %d %s\r\n",
 		res.Status, httpCodeToStatus(res.Status))
 
-	headers := format("Data: %s\r\n", res.Date.Format(time.RFC1123Z))
+	headers := format("Date: %s\r\n", res.Date.Format(time.RFC1123Z))
 	headers += "Server: RoozbehsServer/1.0\r\n"
 	headers += format("Last-Modified: %s\r\n",
 		res.LastModified.Format(time.RFC1123Z))
