@@ -166,7 +166,8 @@ func createResponse(req *HttpRequest) (*HttpResponse, *os.File) {
 		return createError404(), nil
 	}
 	if fileStat.IsDir() {
-
+		req.Path += "/index.html"
+		return createResponse(req)
 	}
 	response.ContentLength = fileStat.Size()
 	response.LastModified = fileStat.ModTime()
