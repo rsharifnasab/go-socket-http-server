@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
+	"strings"
 )
 
 const DEFAULT_PORT int = 80
@@ -16,21 +18,24 @@ const CANNOT_OPEN_PORT_MSG string = `cannot connect to specified port
  hint: consider running executable with superuser permission
  because opening ports <= 1024 typically need more permission`
 
+var HEADER_REGEX_1 = regexp.MustCompile(
+	`^(GET|POST) (/[\w\.]*) HTTP/\d\.\d$`)
+
 var flagPort *int = flag.Int("port", DEFAULT_PORT, FLAG_PORT_HELP)
 
-type HttpRequest struct {
-	Method  string
-	Path    string
-	Version string
-	Host    string
-}
+type (
+	HttpRequest struct {
+		Method string
+		Path   string
+	}
 
-type HttpResponse struct {
-	Status        int
-	Date          string
-	ContentLength int
-	Data          []byte
-}
+	HttpResponse struct {
+		Status        int
+		Date          string
+		ContentLength int
+		Data          []byte
+	}
+)
 
 func main() {
 
@@ -48,19 +53,34 @@ func main() {
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
-			log.Fatalf("error in connecting [%s]", err)
+			log.Printf("error in connecting [%s]", err)
+		} else {
+			go connectionHandler(connection)
+			// go routine: handle it concurrently
 		}
-
-		go connectionHandler(connection)
-		// go routine: handle it concurrently
 	}
 }
 
 func CreateRequest(scanner *bufio.Scanner) (*HttpRequest, error) {
 	req := &HttpRequest{}
 
+	scanner.Scan()
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	firstLine := scanner.Text()
+	res := HEADER_REGEX_1.FindStringSubmatch(firstLine)
+	if len(res) < 1 {
+		return nil, fmt.Errorf(
+			"[%s] doesn't belong to a valid http request", firstLine)
+	}
+	req.Method = res[1]
+	req.Path = res[2]
+	fmt.Println(req)
+
 	for scanner.Scan() {
-		scanner.Text()
+
+		_ = strings.Split(strings.TrimSpace(scanner.Text()), " ")
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
