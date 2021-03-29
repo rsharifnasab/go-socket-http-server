@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -44,6 +45,7 @@ type (
 		Data          []byte
 		Reader        io.Reader
 		LastModified  time.Time
+		Mime          string
 	}
 )
 
@@ -79,6 +81,9 @@ func CreateRequest(scanner *bufio.Scanner) (*HttpRequest, error) {
 		return nil, err
 	}
 	firstLine := scanner.Text()
+	if firstLine == "" {
+		return CreateRequest(scanner)
+	}
 	res := HEADER_REGEX_1.FindStringSubmatch(firstLine)
 	if len(res) < 1 {
 		return nil, fmt.Errorf(
@@ -124,9 +129,13 @@ func writeResponse(res *HttpResponse, writer *bufio.Writer) error {
 		res.Status, httpCodeToStatus(res.Status))
 
 	headers := format("Date: %s\r\n", res.Date.Format(time.RFC1123Z))
-	headers += "Server: RoozbehsServer/1.0\r\n"
-	headers += format("Last-Modified: %s\r\n",
-		res.LastModified.Format(time.RFC1123Z))
+	headers += "Server: RoozbehAwesomeServer/1.0\r\n"
+
+	if res.Reader != nil {
+		headers += format("Last-Modified: %s\r\n",
+			res.LastModified.Format(time.RFC1123Z))
+	}
+	headers += format("Content-Type: %s;\r\n", res.Mime)
 	headers += "Connection: close\r\n"
 	headers += format("Content-Length: %d\r\n", res.ContentLength)
 
@@ -171,6 +180,7 @@ func createResponse(req *HttpRequest) (*HttpResponse, *os.File) {
 	}
 	response.ContentLength = fileStat.Size()
 	response.LastModified = fileStat.ModTime()
+	response.Mime = extensionToMime(filepath.Ext(req.Path))
 
 	return response, file
 }
@@ -180,6 +190,7 @@ func emptyResponse() *HttpResponse {
 		ContentLength: 0,
 		Status:        200,
 		Date:          time.Now(),
+		Mime:          extensionToMime(".txt"),
 	}
 }
 
@@ -193,7 +204,7 @@ func createError400() *HttpResponse {
 
 func createError404() *HttpResponse {
 	resp := emptyResponse()
-	resp.Status = 400
+	resp.Status = 404
 	resp.Data = []byte(NOT_FOUND_MSG)
 	resp.ContentLength = int64(len(resp.Data))
 	return resp
@@ -222,68 +233,69 @@ func connectionHandler(conn net.Conn) {
 	log.Printf("connection from [%s] closed", conn.LocalAddr())
 }
 
-func extensionToMime(fileExt string) (string, error) {
+func extensionToMime(fileExt string) string {
 	switch fileExt {
 	case ".html":
-		return "text/html", nil
+		return "text/html"
 	case ".htm":
-		return "text/html", nil
+		return "text/html"
 	case ".js":
-		return "application/javascript", nil
+		return "application/javascript"
 	case ".json":
-		return "application/json", nil
+		return "application/json"
 	case ".xml":
-		return "application/xml", nil
+		return "application/xml"
 	case ".zip":
-		return "application/zip", nil
+		return "application/zip"
 	case ".wma":
-		return "audio/x-ms-wma", nil
+		return "audio/x-ms-wma"
 	case ".txt":
-		return "text/plain", nil
+		return "text/plain"
 	case ".ttf":
-		return "applicatcase ion/x-font-ttf", nil
+		return "applicatcase ion/x-font-ttf"
 	case ".tex":
-		return "application/x-tex", nil
+		return "application/x-tex"
 	case ".sh":
-		return "application/x-sh", nil
+		return "application/x-sh"
 	case ".py":
-		return "text/x-python", nil
+		return "text/x-python"
 	case ".png":
-		return "image/png", nil
+		return "image/png"
 	case ".pdf":
-		return "application/pdf", nil
+		return "application/pdf"
 	case ".mpeg":
-		return "video/mpeg", nil
+		return "video/mpeg"
 	case ".mpa":
-		return "video/mpeg", nil
+		return "video/mpeg"
 	case ".mp4":
-		return "video/mp4", nil
+		return "video/mp4"
 	case ".mp3":
-		return "audio/mpeg", nil
+		return "audio/mpeg"
 	case ".log":
-		return "text/plain", nil
+		return "text/plain"
 	case ".jpg":
-		return "image/jpeg", nil
+		return "image/jpeg"
 	case ".jpeg":
-		return "image/jpeg", nil
+		return "image/jpeg"
 	case ".java":
-		return "text/x-java-source", nil
+		return "text/x-java-source"
 	case ".jar":
-		return "application/java-archive", nil
+		return "application/java-archive"
 	case ".gif":
-		return "image/gif", nil
+		return "image/gif"
 	case ".cpp":
-		return "text/x-c", nil
+		return "text/x-c"
 	case ".bmp":
-		return "image/bmp", nil
+		return "image/bmp"
 	case ".avi":
-		return "video/x-msvideo", nil
+		return "video/x-msvideo"
 	case ".mkv":
-		return "video/x-matroska", nil
+		return "video/x-matroska"
+	case ".ico":
+		return "image/x-icon"
 
 	default:
-		return "application/octet-stream",
-			fmt.Errorf("[%s] is not a valid extension", fileExt)
+		return "application/octet-stream"
 	}
 
 }
